@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lumina — Sign In</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+
+<!-- ═══════════════════════════════════════════════
+     SUPABASE CONFIG — Replace these two values
+     after creating your Supabase project
+     ═══════════════════════════════════════════════ -->
+<script>
+  const SUPABASE_URL = 'YOUR_SUPABASE_URL';       // e.g. https://xxxx.supabase.co
+  const SUPABASE_ANON_KEY = 'YOUR_SUPABASE_ANON_KEY'; // long JWT string from Supabase dashboard
+</script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink: #0f0e0d;
+    --cream: #f7f4ef;
+    --gold: #c9a96e;
+    --gold-light: #e8d5b0;
+    --muted: #8a8680;
+    --error: #c0392b;
+    --success: #27ae60;
+    --card-bg: #ffffff;
+    --border: #e2ddd6;
+    --shadow: 0 24px 64px rgba(15,14,13,0.10);
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--cream);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    position: relative;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 80% 60% at 20% 10%, rgba(201,169,110,0.13) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 80% at 80% 90%, rgba(201,169,110,0.09) 0%, transparent 60%),
+      radial-gradient(ellipse 100% 100% at 50% 50%, #f7f4ef 0%, #ede8df 100%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    top: -100px; left: -100px;
+    width: 500px; height: 500px;
+    border: 1px solid rgba(201,169,110,0.15);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .deco-circle {
+    position: fixed;
+    bottom: -120px; right: -120px;
+    width: 500px; height: 500px;
+    border: 1px solid rgba(201,169,110,0.12);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .deco-circle::after {
+    content: '';
+    position: absolute;
+    inset: 40px;
+    border: 1px solid rgba(201,169,110,0.08);
+    border-radius: 50%;
+  }
+
+  .card-wrap {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 440px;
+    padding: 20px;
+  }
+
+  .card {
+    background: var(--card-bg);
+    border-radius: 24px;
+    padding: 52px 48px 44px;
+    box-shadow: var(--shadow), 0 1px 0 rgba(201,169,110,0.3) inset;
+    border: 1px solid rgba(226,221,214,0.8);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 36px;
+  }
+
+  .logo-mark {
+    width: 36px; height: 36px;
+    border: 2px solid var(--gold);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .logo-mark::before {
+    content: '✦';
+    color: var(--gold);
+    font-size: 14px;
+  }
+
+  .logo-text {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--ink);
+    letter-spacing: -0.5px;
+  }
+
+  .panel { display: none; animation: fadeUp 0.4s ease both; }
+  .panel.active { display: block; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 28px;
+    font-weight: 600;
+    color: var(--ink);
+    line-height: 1.2;
+    margin-bottom: 6px;
+  }
+
+  .subtitle {
+    font-size: 14px;
+    color: var(--muted);
+    font-weight: 400;
+    margin-bottom: 32px;
+    line-height: 1.5;
+  }
+
+  .field { margin-bottom: 18px; position: relative; }
+
+  label {
+    display: block;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--ink);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 8px;
+  }
+
+  input {
+    width: 100%;
+    padding: 13px 16px;
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    color: var(--ink);
+    background: #fdfcfb;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+  }
+
+  input::placeholder { color: #c4bfb9; }
+
+  input:focus {
+    border-color: var(--gold);
+    box-shadow: 0 0 0 3px rgba(201,169,110,0.12);
+    background: #fff;
+  }
+
+  input.error-field { border-color: var(--error); }
+
+  .pw-wrap { position: relative; }
+  .pw-toggle {
+    position: absolute; right: 14px; top: 50%;
+    transform: translateY(-50%);
+    background: none; border: none; cursor: pointer;
+    color: var(--muted); font-size: 16px; padding: 4px;
+    transition: color 0.2s;
+  }
+  .pw-toggle:hover { color: var(--ink); }
+
+  .field-row {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .field-row label { margin-bottom: 0; }
+
+  .link-sm {
+    font-size: 12px;
+    color: var(--gold);
+    text-decoration: none;
+    font-weight: 500;
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+  .link-sm:hover { color: #a67c45; }
+
+  .btn {
+    width: 100%;
+    padding: 14px;
+    background: var(--ink);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.08) 0%, transparent 50%);
+    pointer-events: none;
+  }
+
+  .btn:hover {
+    background: #1e1c1a;
+    box-shadow: 0 8px 24px rgba(15,14,13,0.18);
+    transform: translateY(-1px);
+  }
+
+  .btn:active { transform: translateY(0); box-shadow: none; }
+  .btn:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
+
+  .btn.gold-btn {
+    background: linear-gradient(135deg, #c9a96e 0%, #b8925a 100%);
+    color: #fff;
+  }
+  .btn.gold-btn:hover {
+    background: linear-gradient(135deg, #d4b47a 0%, #c9a96e 100%);
+    box-shadow: 0 8px 24px rgba(201,169,110,0.3);
+  }
+
+  .divider {
+    display: flex; align-items: center; gap: 12px;
+    margin: 22px 0;
+  }
+  .divider::before, .divider::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+  .divider span { font-size: 12px; color: var(--muted); white-space: nowrap; }
+
+  .oauth-btn {
+    width: 100%;
+    padding: 12px;
+    background: transparent;
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--ink);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 10px;
+    transition: border-color 0.2s, background 0.2s;
+    margin-bottom: 10px;
+  }
+  .oauth-btn:hover { border-color: var(--gold-light); background: #fdfcfb; }
+  .oauth-icon { width: 18px; height: 18px; flex-shrink: 0; }
+
+  .switch-text {
+    text-align: center;
+    font-size: 13.5px;
+    color: var(--muted);
+    margin-top: 24px;
+  }
+  .switch-text a {
+    color: var(--gold);
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+    transition: color 0.2s;
+  }
+  .switch-text a:hover { color: #a67c45; }
+
+  .back-link {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 13px; color: var(--muted);
+    cursor: pointer; margin-bottom: 28px;
+    transition: color 0.2s;
+    background: none; border: none;
+    font-family: 'DM Sans', sans-serif;
+    padding: 0;
+  }
+  .back-link:hover { color: var(--ink); }
+
+  .alert {
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 13.5px;
+    margin-bottom: 18px;
+    display: none;
+  }
+  .alert.show { display: block; }
+  .alert.success { background: #eafaf1; color: var(--success); border: 1px solid #a9dfbf; }
+  .alert.error   { background: #fdedec; color: var(--error);   border: 1px solid #f1948a; }
+  .alert.info    { background: #eaf4fd; color: #2980b9;        border: 1px solid #aed6f1; }
+
+  .check-row {
+    display: flex; align-items: center; gap: 10px;
+    margin-bottom: 18px;
+  }
+  .check-row input[type="checkbox"] {
+    width: 17px; height: 17px; border-radius: 5px;
+    accent-color: var(--gold);
+    cursor: pointer; flex-shrink: 0;
+  }
+  .check-row label {
+    font-size: 13px; text-transform: none; letter-spacing: 0;
+    color: var(--muted); font-weight: 400; margin-bottom: 0;
+    cursor: pointer; line-height: 1.4;
+  }
+  .check-row label a { color: var(--gold); text-decoration: none; }
+
+  .strength-bar { display: flex; gap: 4px; margin-top: 8px; }
+  .strength-seg {
+    flex: 1; height: 3px; border-radius: 99px;
+    background: var(--border); transition: background 0.3s;
+  }
+  .strength-seg.weak   { background: #e74c3c; }
+  .strength-seg.fair   { background: #e67e22; }
+  .strength-seg.good   { background: #f1c40f; }
+  .strength-seg.strong { background: var(--success); }
+  .strength-label { font-size: 11px; color: var(--muted); margin-top: 5px; text-align: right; }
+
+  .otp-wrap {
+    display: flex; gap: 10px; justify-content: center;
+    margin-bottom: 24px;
+  }
+  .otp-wrap input {
+    width: 52px; height: 58px;
+    text-align: center; font-size: 22px; font-weight: 600;
+    padding: 0; border-radius: 14px;
+  }
+
+  .btn .spinner {
+    display: none;
+    width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,0.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    margin: 0 auto;
+  }
+  .btn.loading .btn-text { display: none; }
+  .btn.loading .spinner  { display: block; }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Config warning banner ── */
+  .config-warning {
+    background: #fff8e1;
+    border: 1px solid #f9a825;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 12px;
+    color: #7b5e00;
+    margin-bottom: 20px;
+    display: none;
+    line-height: 1.5;
+  }
+  .config-warning.show { display: block; }
+  .config-warning strong { display: block; margin-bottom: 2px; }
+
+  @media (max-width: 480px) {
+    .card { padding: 40px 28px 36px; }
+    h1 { font-size: 24px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="deco-circle"></div>
+
+<div class="card-wrap">
+  <div class="card">
+    <div class="logo">
+      <div class="logo-mark"></div>
+      <span class="logo-text">Lumina</span>
+    </div>
+
+    <!-- Config warning (shown when Supabase not configured) -->
+    <div class="config-warning" id="config-warning">
+      <strong>⚠️ Supabase not configured</strong>
+      Open this file and replace <code>YOUR_SUPABASE_URL</code> and <code>YOUR_SUPABASE_ANON_KEY</code> at the top of the script to enable real auth.
+    </div>
+
+    <!-- ───── LOGIN PANEL ───── -->
+    <div class="panel active" id="panel-login">
+      <h1>Welcome back</h1>
+      <p class="subtitle">Sign in to continue your journey.</p>
+
+      <div class="alert" id="login-alert"></div>
+
+      <div class="field">
+        <label for="login-email">Email</label>
+        <input type="email" id="login-email" placeholder="you@example.com" autocomplete="email">
+      </div>
+
+      <div class="field">
+        <div class="field-row">
+          <label for="login-pw">Password</label>
+          <span class="link-sm" onclick="showPanel('panel-forgot')">Forgot password?</span>
+        </div>
+        <div class="pw-wrap">
+          <input type="password" id="login-pw" placeholder="••••••••" autocomplete="current-password">
+          <button class="pw-toggle" onclick="togglePw('login-pw', this)" title="Show password">👁</button>
+        </div>
+      </div>
+
+      <button class="btn" id="login-btn" onclick="handleLogin()">
+        <span class="btn-text">Sign In</span>
+        <div class="spinner"></div>
+      </button>
+
+      <div class="divider"><span>or continue with</span></div>
+
+      <button class="oauth-btn" onclick="handleGoogleLogin()">
+        <svg class="oauth-icon" viewBox="0 0 24 24" fill="none">
+          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+        </svg>
+        Continue with Google
+      </button>
+
+      <p class="switch-text">Don't have an account? <a onclick="showPanel('panel-signup')">Sign up</a></p>
+    </div>
+
+    <!-- ───── SIGNUP PANEL ───── -->
+    <div class="panel" id="panel-signup">
+      <h1>Create account</h1>
+      <p class="subtitle">Join Lumina — it only takes a moment.</p>
+
+      <div class="alert" id="signup-alert"></div>
+
+      <div style="display:flex;gap:12px">
+        <div class="field" style="flex:1">
+          <label for="su-first">First name</label>
+          <input type="text" id="su-first" placeholder="Jane">
+        </div>
+        <div class="field" style="flex:1">
+          <label for="su-last">Last name</label>
+          <input type="text" id="su-last" placeholder="Doe">
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="su-email">Email</label>
+        <input type="email" id="su-email" placeholder="you@example.com">
+      </div>
+
+      <div class="field">
+        <label for="su-pw">Password</label>
+        <div class="pw-wrap">
+          <input type="password" id="su-pw" placeholder="Create a strong password" oninput="checkStrength(this.value)">
+          <button class="pw-toggle" onclick="togglePw('su-pw', this)" title="Show password">👁</button>
+        </div>
+        <div class="strength-bar">
+          <div class="strength-seg" id="s1"></div>
+          <div class="strength-seg" id="s2"></div>
+          <div class="strength-seg" id="s3"></div>
+          <div class="strength-seg" id="s4"></div>
+        </div>
+        <div class="strength-label" id="strength-lbl"></div>
+      </div>
+
+      <div class="check-row">
+        <input type="checkbox" id="su-terms">
+        <label for="su-terms">I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a></label>
+      </div>
+
+      <button class="btn gold-btn" id="signup-btn" onclick="handleSignup()">
+        <span class="btn-text">Create Account</span>
+        <div class="spinner"></div>
+      </button>
+
+      <p class="switch-text">Already have an account? <a onclick="showPanel('panel-login')">Sign in</a></p>
+    </div>
+
+    <!-- ───── FORGOT PASSWORD PANEL ───── -->
+    <div class="panel" id="panel-forgot">
+      <button class="back-link" onclick="showPanel('panel-login')">← Back to sign in</button>
+      <h1>Reset password</h1>
+      <p class="subtitle">Enter your email and we'll send you a reset link via Supabase.</p>
+
+      <div class="alert" id="forgot-alert"></div>
+
+      <div class="field">
+        <label for="fp-email">Email address</label>
+        <input type="email" id="fp-email" placeholder="you@example.com">
+      </div>
+
+      <button class="btn" id="forgot-btn" onclick="handleForgot()">
+        <span class="btn-text">Send Reset Link</span>
+        <div class="spinner"></div>
+      </button>
+    </div>
+
+    <!-- ───── SUCCESS PANEL ───── -->
+    <div class="panel" id="panel-success">
+      <div style="text-align:center;padding:20px 0">
+        <div style="font-size:52px;margin-bottom:20px">✦</div>
+        <h1 id="success-title">You're in!</h1>
+        <p class="subtitle" id="success-msg" style="margin-bottom:32px">Welcome to Lumina. Your account is ready.</p>
+        <button class="btn" onclick="showPanel('panel-login')" style="max-width:200px;margin:0 auto">
+          <span class="btn-text">Continue</span>
+          <div class="spinner"></div>
+        </button>
+      </div>
+    </div>
+
+    <!-- ───── VERIFY EMAIL PANEL ───── -->
+    <div class="panel" id="panel-verify">
+      <div style="text-align:center;padding:20px 0">
+        <div style="font-size:48px;margin-bottom:20px">📬</div>
+        <h1>Check your inbox</h1>
+        <p class="subtitle" id="verify-msg" style="margin-bottom:32px">
+          We sent a confirmation link to your email. Click it to activate your account.
+        </p>
+        <button class="btn" onclick="showPanel('panel-login')" style="max-width:200px;margin:0 auto">
+          <span class="btn-text">Back to Sign In</span>
+          <div class="spinner"></div>
+        </button>
+      </div>
+    </div>
+
+  </div><!-- /card -->
+</div><!-- /card-wrap -->
+
+<script>
+  // ═══════════════════════════════════════════
+  //  SUPABASE CLIENT INIT
+  // ═══════════════════════════════════════════
+  let supabase = null;
+  let isConfigured = false;
+
+  try {
+    if (SUPABASE_URL && SUPABASE_URL !== 'YOUR_SUPABASE_URL' &&
+        SUPABASE_ANON_KEY && SUPABASE_ANON_KEY !== 'YOUR_SUPABASE_ANON_KEY') {
+      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+      isConfigured = true;
+    } else {
+      document.getElementById('config-warning').classList.add('show');
+    }
+  } catch(e) {
+    document.getElementById('config-warning').classList.add('show');
+  }
+
+  // ═══════════════════════════════════════════
+  //  UI HELPERS
+  // ═══════════════════════════════════════════
+  function showPanel(id) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    const panel = document.getElementById(id);
+    panel.classList.add('active');
+    panel.style.animation = 'none';
+    panel.offsetHeight;
+    panel.style.animation = '';
+  }
+
+  function togglePw(inputId, btn) {
+    const input = document.getElementById(inputId);
+    input.type = input.type === 'password' ? 'text' : 'password';
+    btn.textContent = input.type === 'password' ? '👁' : '🙈';
+  }
+
+  function showAlert(id, type, msg) {
+    const el = document.getElementById(id);
+    el.className = 'alert ' + type + ' show';
+    el.textContent = msg;
+  }
+  function hideAlert(id) {
+    document.getElementById(id).classList.remove('show');
+  }
+
+  function setLoading(btnId, loading) {
+    const btn = document.getElementById(btnId);
+    btn.disabled = loading;
+    btn.classList.toggle('loading', loading);
+  }
+
+  // ═══════════════════════════════════════════
+  //  LOGIN
+  // ═══════════════════════════════════════════
+  async function handleLogin() {
+    hideAlert('login-alert');
+    const email = document.getElementById('login-email').value.trim();
+    const pw    = document.getElementById('login-pw').value;
+
+    if (!email || !pw) {
+      return showAlert('login-alert', 'error', 'Please fill in both fields.');
+    }
+    if (!validateEmail(email)) {
+      return showAlert('login-alert', 'error', 'Please enter a valid email address.');
+    }
+
+    if (!isConfigured) {
+      // Demo mode — simulate success
+      return simulateSuccess('login', email);
+    }
+
+    setLoading('login-btn', true);
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password: pw });
+
+      if (error) throw error;
+
+      // Record login event in your custom table
+      await logAuthEvent('login', data.user.id, email);
+
+      document.getElementById('success-title').textContent = "You're in!";
+      document.getElementById('success-msg').textContent = `Welcome back to Lumina, ${data.user.user_metadata?.first_name || ''}.`;
+      showPanel('panel-success');
+    } catch (err) {
+      showAlert('login-alert', 'error', friendlyError(err.message));
+    } finally {
+      setLoading('login-btn', false);
+    }
+  }
+
+  // ═══════════════════════════════════════════
+  //  SIGNUP
+  // ═══════════════════════════════════════════
+  async function handleSignup() {
+    hideAlert('signup-alert');
+    const first = document.getElementById('su-first').value.trim();
+    const last  = document.getElementById('su-last').value.trim();
+    const email = document.getElementById('su-email').value.trim();
+    const pw    = document.getElementById('su-pw').value;
+    const terms = document.getElementById('su-terms').checked;
+
+    if (!first || !last || !email || !pw) {
+      return showAlert('signup-alert', 'error', 'Please fill in all fields.');
+    }
+    if (!validateEmail(email)) {
+      return showAlert('signup-alert', 'error', 'Please enter a valid email address.');
+    }
+    if (pw.length < 8) {
+      return showAlert('signup-alert', 'error', 'Password must be at least 8 characters.');
+    }
+    if (!terms) {
+      return showAlert('signup-alert', 'error', 'Please accept the terms to continue.');
+    }
+
+    if (!isConfigured) {
+      return simulateSuccess('signup', email, first);
+    }
+
+    setLoading('signup-btn', true);
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password: pw,
+        options: {
+          data: { first_name: first, last_name: last, full_name: `${first} ${last}` }
+        }
+      });
+
+      if (error) throw error;
+
+      // Record signup event
+      if (data.user) {
+        await logAuthEvent('signup', data.user.id, email, { first_name: first, last_name: last });
+      }
+
+      document.getElementById('verify-msg').textContent =
+        `We sent a confirmation link to ${email}. Click it to activate your account.`;
+      showPanel('panel-verify');
+    } catch (err) {
+      showAlert('signup-alert', 'error', friendlyError(err.message));
+    } finally {
+      setLoading('signup-btn', false);
+    }
+  }
+
+  // ═══════════════════════════════════════════
+  //  FORGOT PASSWORD
+  // ═══════════════════════════════════════════
+  async function handleForgot() {
+    hideAlert('forgot-alert');
+    const email = document.getElementById('fp-email').value.trim();
+
+    if (!email || !validateEmail(email)) {
+      return showAlert('forgot-alert', 'error', 'Please enter a valid email address.');
+    }
+
+    if (!isConfigured) {
+      return showAlert('forgot-alert', 'info', 'Demo mode: Supabase not connected. In production, a reset email would be sent.');
+    }
+
+    setLoading('forgot-btn', true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.href
+      });
+      if (error) throw error;
+      showAlert('forgot-alert', 'success', `Reset link sent to ${email}. Check your inbox.`);
+    } catch (err) {
+      showAlert('forgot-alert', 'error', friendlyError(err.message));
+    } finally {
+      setLoading('forgot-btn', false);
+    }
+  }
+
+  // ═══════════════════════════════════════════
+  //  GOOGLE OAUTH
+  // ═══════════════════════════════════════════
+  async function handleGoogleLogin() {
+    if (!isConfigured) {
+      return showAlert('login-alert', 'info', 'Demo mode: Connect Supabase to enable Google login.');
+    }
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: window.location.href }
+      });
+      if (error) throw error;
+    } catch (err) {
+      showAlert('login-alert', 'error', friendlyError(err.message));
+    }
+  }
+
+  // ═══════════════════════════════════════════
+  //  LOG AUTH EVENTS TO SUPABASE TABLE
+  //  This writes to a "auth_logs" table you create
+  //  in Supabase (see setup guide below)
+  // ═══════════════════════════════════════════
+  async function logAuthEvent(eventType, userId, email, metadata = {}) {
+    if (!supabase) return;
+    try {
+      await supabase.from('auth_logs').insert({
+        event_type: eventType,       // 'login' | 'signup'
+        user_id: userId,
+        email: email,
+        metadata: metadata,
+        user_agent: navigator.userAgent,
+        created_at: new Date().toISOString()
+      });
+    } catch (e) {
+      // Non-critical — don't surface logging errors to user
+      console.warn('Auth log failed:', e.message);
+    }
+  }
+
+  // ═══════════════════════════════════════════
+  //  DEMO MODE (no Supabase connected)
+  // ═══════════════════════════════════════════
+  function simulateSuccess(type, email, firstName = '') {
+    if (type === 'login') {
+      document.getElementById('success-title').textContent = "You're in! (Demo)";
+      document.getElementById('success-msg').textContent = 'Supabase not connected. Connect it to record real logins.';
+    } else {
+      document.getElementById('success-title').textContent = 'Account created! (Demo)';
+      document.getElementById('success-msg').textContent = `Welcome, ${firstName}! Connect Supabase to store real accounts.`;
+    }
+    showPanel('panel-success');
+  }
+
+  // ═══════════════════════════════════════════
+  //  CHECK FOR OAUTH REDIRECT ON PAGE LOAD
+  // ═══════════════════════════════════════════
+  window.addEventListener('load', async () => {
+    if (!supabase) return;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      const user = session.user;
+      await logAuthEvent('oauth_login', user.id, user.email);
+      document.getElementById('success-title').textContent = "You're in!";
+      document.getElementById('success-msg').textContent = `Welcome to Lumina, ${user.user_metadata?.full_name || user.email}.`;
+      showPanel('panel-success');
+    }
+  });
+
+  // ═══════════════════════════════════════════
+  //  PASSWORD STRENGTH
+  // ═══════════════════════════════════════════
+  function checkStrength(pw) {
+    const segs = ['s1','s2','s3','s4'].map(id => document.getElementById(id));
+    const lbl  = document.getElementById('strength-lbl');
+    segs.forEach(s => s.className = 'strength-seg');
+
+    if (!pw) { lbl.textContent = ''; return; }
+
+    let score = 0;
+    if (pw.length >= 8) score++;
+    if (/[A-Z]/.test(pw)) score++;
+    if (/[0-9]/.test(pw)) score++;
+    if (/[^A-Za-z0-9]/.test(pw)) score++;
+
+    const classes = ['weak','fair','good','strong'];
+    const labels  = ['Weak','Fair','Good','Strong'];
+    for (let i = 0; i < score; i++) segs[i].classList.add(classes[score - 1]);
+    lbl.textContent = labels[score - 1] || '';
+    lbl.style.color = score <= 1 ? '#e74c3c' : score === 2 ? '#e67e22' : score === 3 ? '#d4ac0d' : '#27ae60';
+  }
+
+  // ═══════════════════════════════════════════
+  //  HELPERS
+  // ═══════════════════════════════════════════
+  function validateEmail(e) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+  }
+
+  function friendlyError(msg) {
+    if (!msg) return 'Something went wrong. Please try again.';
+    if (msg.includes('Invalid login credentials')) return 'Incorrect email or password.';
+    if (msg.includes('Email not confirmed')) return 'Please confirm your email first.';
+    if (msg.includes('User already registered')) return 'An account with this email already exists.';
+    if (msg.includes('Password should be')) return 'Password must be at least 6 characters.';
+    if (msg.includes('rate limit')) return 'Too many attempts. Please wait a moment.';
+    return msg;
+  }
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════
+     SETUP GUIDE — Read before deploying
+     ═══════════════════════════════════════════════════════════
+
+STEP 1 — Create Supabase Project
+  1. Go to https://supabase.com and sign up / log in
+  2. Click "New Project", fill in name & password
+  3. Wait for it to provision (~1 min)
+
+STEP 2 — Get your credentials
+  1. Go to Project Settings → API
+  2. Copy "Project URL" → paste as SUPABASE_URL above
+  3. Copy "anon / public" key → paste as SUPABASE_ANON_KEY above
+
+STEP 3 — Create the auth_logs table
+  Go to SQL Editor in Supabase and run:
+
+  create table auth_logs (
+    id uuid default gen_random_uuid() primary key,
+    event_type text not null,
+    user_id uuid references auth.users(id),
+    email text,
+    metadata jsonb default '{}',
+    user_agent text,
+    created_at timestamptz default now()
+  );
+
+  -- Allow the app to insert logs
+  alter table auth_logs enable row level security;
+  create policy "Allow insert for authenticated and anon"
+    on auth_logs for insert
+    with check (true);
+
+  -- Only allow users to read their own logs
+  create policy "Users can read own logs"
+    on auth_logs for select
+    using (user_id = auth.uid());
+
+STEP 4 — Enable Google OAuth (optional)
+  1. Supabase Dashboard → Authentication → Providers → Google
+  2. Toggle ON, enter Google OAuth Client ID & Secret
+  3. (Get these from https://console.cloud.google.com)
+  4. Add your Vercel domain to the redirect URLs
+
+STEP 5 — Push to GitHub
+  1. Create a new repo on github.com
+  2. Run: git init && git add . && git commit -m "Initial commit"
+  3. git remote add origin https://github.com/YOUR_USER/YOUR_REPO.git
+  4. git push -u origin main
+
+STEP 6 — Deploy to Vercel
+  1. Go to https://vercel.com and sign in with GitHub
+  2. Click "Add New Project" → import your repo
+  3. No build settings needed (it's a static HTML file)
+  4. Click Deploy — done!
+  5. Add your Vercel domain to Supabase:
+     Authentication → URL Configuration → Site URL = https://your-app.vercel.app
+
+STEP 7 — View your users
+  Supabase Dashboard → Authentication → Users   (all signups)
+  Supabase Dashboard → Table Editor → auth_logs  (all login/signup events)
+
+═══════════════════════════════════════════════════════════ -->
+</body>
+</html>
